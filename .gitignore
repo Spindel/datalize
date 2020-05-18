@@ -1,0 +1,11 @@
+htmlcov
+.tox
+.coverage
+testreport.xml
+.eggs
+.mypy_cache
+*.egg
+*.py[cod]
+__pycache__/
+*.egg-info/
+
