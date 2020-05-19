@@ -12,21 +12,6 @@ from dataclasses import is_dataclass, fields, asdict
 from typing import Any, Type, Union, Sequence
 
 
-def is_optional_type(type_obj: Type) -> bool:
-    """Return wether a type is an instance of a typing.Optional[...].
-
-    A typing.Optional[X] is implemented as a typing.Union[X,
-    NoneType].
-
-    """
-    if getattr(type_obj, "__origin__", None) != Union:
-        return False
-    if len(type_obj.__args__) != 2:
-        return False
-    _, none_type = type_obj.__args__
-    return none_type is type(None)  # noqa: E721
-
-
 def get_union_types(type_obj: Type) -> Sequence[Type]:
     """Return the possible union types of the object"""
     return type_obj.__args__
@@ -35,11 +20,6 @@ def get_union_types(type_obj: Type) -> Sequence[Type]:
 def is_union_type(type_obj: Type) -> bool:
     """Return wether a type is an instance of a typing.Union[....]"""
     return Union == getattr(type_obj, "__origin__", None)
-
-
-def optional_type_argument(optional_type_obj: Type) -> Type:
-    """Return type argument X from a typing.Optional[X]."""
-    return optional_type_obj.__args__[0]
 
 
 def is_list_type(type_obj: Type) -> bool:
@@ -64,14 +44,6 @@ def deserialize(json: Any, *, target_type: Type) -> Any:
             for key in json
         }
         return target_type(**kwargs)
-
-    if is_optional_type(target_type):
-        # Handle values for typing.Optional[...] types
-        if json is None:
-            return None
-        return deserialize(
-            json, target_type=optional_type_argument(target_type)
-        )
 
     if is_list_type(target_type):
         # Create lists with each item deserialized
