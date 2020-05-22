@@ -33,7 +33,6 @@ def list_type_argument(list_type_obj: Type) -> Type:
 
 
 def deserialize(json: Any, *, target_type: Type) -> Any:
-    # pylint: disable=R0911
     """Convert data structures loaded from JSON to a specified type."""
     if is_dataclass(target_type):
         # Instantiate a dataclass with its properties deserialized
