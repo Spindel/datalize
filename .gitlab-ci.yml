@@ -1,0 +1,111 @@
+---
+include:
+    - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
+
+variables:
+    # We need origin/master to be available as well
+    GIT_STRATEGY: clone
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+
+cache:
+    paths:
+        - .cache/pip
+
+stages:
+    - test
+    - rebase
+
+
+.before_job: &before
+    before_script:
+        # Make sure we can always rebase
+        - git fetch origin $CI_DEFAULT_BRANCH
+        - git config --global user.email "ci@localhost"
+        - git config --global user.name "CI System"
+        # Make sure we can always run CI python jobs
+        - python3 -V
+        - python3 -m venv venv
+        - source venv/bin/activate
+        - python -m pip install -r requirements-dev.txt
+        - python -m pip install -e .
+
+lint:
+    image: python:latest
+    stage: test
+    <<: *before
+    script:
+        - make check
+        - make lint
+
+test:
+    image: python:latest
+    stage: test
+    <<: *before
+    script:
+        - make test
+    coverage: '/^TOTAL.+?(\d+\%)$/'
+    artifacts:
+        reports:
+            junit: testreport.xml
+
+
+rebase:lint:
+    image: python:latest
+    stage: rebase
+    rules:
+        # Don't rebase master to itself.
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          when: never
+
+        # Don't run rebases on tags
+        - if: $CI_COMMIT_TAG
+          when: never
+
+        # Run if we have a merge request or are a branch
+        - if: $CI_MERGE_REQUEST_IID || $CI_COMMIT_BRANCH
+          when: always
+          # rebases might fail due to reasons including removed dependencies.
+          # those errors are okay, so we allow failures
+          allow_failure: true
+
+    <<: *before
+    # only run if test on the last lint job succeeded
+    needs:
+        - lint
+    script:
+        - git rebase --rebase-merges --autosquash origin/$CI_DEFAULT_BRANCH
+          -x 'git --no-pager log --oneline --max-count=1'
+          -x 'make check'
+          -x 'make lint'
+
+rebase:test:
+    image: python:latest
+    stage: rebase
+    rules:
+        # Don't rebase master to itself.
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          when: never
+
+        # Don't run rebases on tags
+        - if: $CI_COMMIT_TAG
+          when: never
+
+        # Run if we have a merge request or are a branch
+        - if: $CI_MERGE_REQUEST_IID || $CI_COMMIT_BRANCH
+          when: always
+          # rebases might fail due to reasons including removed dependencies.
+          # those errors are okay, so we allow failures
+          allow_failure: true
+
+    # Run after tests, only run if test on the last job succeeded
+    needs:
+        - test
+    <<: *before
+    script:
+        # editable is important, otherwise all tests are executed
+        # against the code in the last commit
+        - python -m pip install --editable  .
+        - git rebase --rebase-merges --autosquash origin/$CI_DEFAULT_BRANCH
+          -x 'git --no-pager log --oneline --max-count=1'
+          -x 'make test'
