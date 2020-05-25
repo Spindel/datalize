@@ -6,7 +6,6 @@ check: black flake8
 .PHONY: lint
 lint: mypy pylint 
 	
-
 .PHONY: flake8
 flake8:
 	$(Q)flake8 src/
@@ -28,4 +27,10 @@ pylint:
 blacken:
 	$(Q)black src/ tests/
 
+.PHONY: test
+test: testreport.xml
 
+testreport.xml: .FORCE
+	$(Q)pytest
+
+.PHONY: .FORCE

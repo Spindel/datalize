@@ -9,7 +9,7 @@ setup(
     author="D. Spindel Ljungmark",
     author_email="spider@skuggor.se",
     keywords="dataclass json serialize",
-    python_requires=">=3.8",
+    python_requires=">=3.7",
     # automatic version handling from git
     setup_requires=["setuptools_scm"],
     # Paths and packaging data
