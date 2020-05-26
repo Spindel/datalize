@@ -17,4 +17,5 @@ setup(
     packages=find_packages(where="src"),
     include_package_data=True,
     use_scm_version=True,
+    license="Apache-2.0",
 )
